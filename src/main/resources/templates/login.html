@@ -6,23 +6,66 @@
   <title>Login Page</title>
   <link rel="icon" type="image/png" href="https://i.pinimg.com/736x/f2/b6/9c/f2b69c4361ecc3e3a6b672aaf2fee5f4.jpg">
   <link rel="stylesheet" href="/css/login.css" />
+  <style>
+    #popupMessage {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: #4caf50;
+      color: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      font-size: 1.1em;
+      text-align: center;
+      z-index: 9999;
+      display: none;
+      opacity: 10;
+      transition: opacity 0.5s ease;
+    }
+
+    .input-error {
+      border: 2px solid red !important;
+    }
+
+    .field-error {
+      font-size: 0.85em;
+      color: red;
+      margin-top: -8px;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .success-message {
+      color: green;
+    }
+
+    .error-message {
+      color: red;
+    }
+  </style>
 </head>
 <body>
 <div class="container" id="container">
-  <!-- Spring error message -->
   <p th:if="${error}" th:text="${error}" id="spring-error" class="error-message"></p>
   <p id="message" class="error-message" style="display:none;"></p>
+  <div id="popupMessage"></div>
 
   <!-- Sign Up Form -->
   <div class="form-container sign-up" id="signUpForm">
-    <form id="registerForm">
+    <form id="registerForm" novalidate>
       <h1>Create Account</h1>
       <input type="text" name="username" placeholder="Username" required />
+      <div class="field-error" id="error-username"></div>
+
       <input type="password" name="password" placeholder="Password" required />
+      <div class="field-error" id="error-password"></div>
+
       <input type="password" name="confirmPassword" placeholder="Confirm Password" required />
-      <a href="#" id="goLogin">
-        Already have an account? <span class="link-button">Sign in</span>
-      </a>
+      <div class="field-error" id="error-confirm"></div>
+
+      <a href="#" id="goLogin">Already have an account? <span class="link-button">Sign in</span></a>
       <button type="submit">Sign Up</button>
     </form>
   </div>
@@ -33,9 +76,7 @@
       <h1>Sign In</h1>
       <input type="text" name="username" placeholder="Username" required autocomplete="username" />
       <input type="password" name="password" placeholder="Password" required autocomplete="current-password" />
-      <a href="#" id="goRegister">
-        Don't have an account? <span class="link-button">Sign up</span>
-      </a>
+      <a href="#" id="goRegister">Don't have an account? <span class="link-button">Sign up</span></a>
       <button type="submit">Sign In</button>
     </form>
   </div>
@@ -54,7 +95,6 @@
   const container = document.getElementById("container");
   const goRegister = document.getElementById("goRegister");
   const goLogin = document.getElementById("goLogin");
-
   const signInForm = document.getElementById("signInForm");
   const signUpForm = document.getElementById("signUpForm");
   const placeholder = document.getElementById("formPlaceholder");
@@ -83,15 +123,27 @@
     }
   });
 
+  const popupEl = document.getElementById("popupMessage");
   const messageEl = document.getElementById("message");
   let messageTimeout = null;
+
+  function showPopupMessage(text) {
+    popupEl.textContent = text;
+    popupEl.style.display = "block";
+    popupEl.style.opacity = 1;
+    setTimeout(() => {
+      popupEl.style.opacity = 0;
+      setTimeout(() => {
+        popupEl.style.display = "none";
+      }, 500);
+    }, 2000);
+  }
 
   function showMessage(text, isError = true, autoHide = true) {
     messageEl.style.display = "block";
     messageEl.textContent = text;
     messageEl.className = isError ? "error-message" : "success-message";
     messageEl.style.opacity = 1;
-
     if (autoHide) {
       if (messageTimeout) clearTimeout(messageTimeout);
       messageTimeout = setTimeout(() => {
@@ -105,21 +157,49 @@
 
   const registerForm = document.getElementById("registerForm");
 
-  registerForm.addEventListener("submit", async function(event) {
+  const clearFieldErrors = () => {
+    ["username", "password", "confirm"].forEach((field) => {
+      const input = registerForm[field === "confirm" ? "confirmPassword" : field];
+      input.classList.remove("input-error");
+      document.getElementById("error-" + field).style.display = "none";
+      document.getElementById("error-" + field).textContent = "";
+    });
+  };
+
+  registerForm.addEventListener("input", clearFieldErrors);
+
+  registerForm.addEventListener("submit", async function (event) {
     event.preventDefault();
+    clearFieldErrors();
 
     const username = registerForm.username.value.trim();
     const password = registerForm.password.value;
     const confirmPassword = registerForm.confirmPassword.value;
 
-    if (!username || !password || !confirmPassword) {
-      showMessage("All fields are required.");
-      return;
+    let hasError = false;
+
+    if (!username) {
+      showFieldError("username", "Username is required.");
+      hasError = true;
     }
-    if (password !== confirmPassword) {
-      showMessage("Passwords do not match.");
-      return;
+
+    if (!password) {
+      showFieldError("password", "Password is required.");
+      hasError = true;
+    } else if (password.length < 6) {
+      showFieldError("password", "Password must be at least 6 characters.");
+      hasError = true;
     }
+
+    if (!confirmPassword) {
+      showFieldError("confirm", "Please confirm your password.");
+      hasError = true;
+    } else if (password !== confirmPassword) {
+      showFieldError("confirm", "Passwords do not match.");
+      hasError = true;
+    }
+
+    if (hasError) return;
 
     try {
       const formData = new URLSearchParams();
@@ -136,11 +216,11 @@
       const result = await response.json();
 
       if (result.success) {
-        showMessage(result.message || "Registered successfully! Please log in.", false);
+        showPopupMessage("Registration successful! Redirecting");
         setTimeout(() => {
           registerForm.reset();
-          goLogin.click(); // switch back to login
-        }, 1500);
+          goLogin.click();
+        }, 2000);
       } else {
         showMessage(result.message || "Registration failed.");
       }
@@ -150,7 +230,14 @@
     }
   });
 
-  // Fade Spring Boot error after a few seconds
+  function showFieldError(field, message) {
+    const input = registerForm[field === "confirm" ? "confirmPassword" : field];
+    const errorEl = document.getElementById("error-" + field);
+    input.classList.add("input-error");
+    errorEl.textContent = message;
+    errorEl.style.display = "block";
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const springError = document.getElementById("spring-error");
     if (springError) {
@@ -166,3 +253,4 @@
 </script>
 </body>
 </html>
+
