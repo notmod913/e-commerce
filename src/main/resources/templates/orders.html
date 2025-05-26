@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/png" href="https://i.pinimg.com/736x/f2/b6/9c/f2b69c4361ecc3e3a6b672aaf2fee5f4.jpg">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orders</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAf3vcMWpDbBWe5Xn_RMAonO53RHqZ15bQ",
+            authDomain: "profile-80e12.firebaseapp.com",
+            projectId: "profile-80e12",
+            storageBucket: "profile-80e12.appspot.com",
+            messagingSenderId: "975400278491",
+            appId: "1:975400278491:web:afec2dcca155409ca8effe",
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        $(document).ready(function () {
+            $.get('/api/session', function (sessionData) {
+                if (!sessionData.loggedIn) {
+                    alert("Please login first.");
+                    window.location.href = "/login";
+                    return;
+                }
+
+                const username = sessionData.username;
+                const ordersContainer = $('#ordersContainer');
+                const clearOrdersButton = $('#clearOrdersButton');
+                const grandTotalElement = $('#grandTotal');
+
+                function loadOrders() {
+                    ordersContainer.empty();
+                    grandTotalElement.text('');
+
+                    const userDocRef = db.collection('users').doc(username);
+                    userDocRef.get().then(doc => {
+                        if (!doc.exists || !doc.data().orders || doc.data().orders.length === 0) {
+                            ordersContainer.html('<p>No orders placed yet.</p>');
+                            clearOrdersButton.hide();
+                            return;
+                        }
+
+                        const orders = doc.data().orders;
+                        let grandTotal = 0;
+
+                        orders.forEach(order => {
+                            let totalAmount = 0;
+                            order.items.forEach(product => {
+                                totalAmount += product.price * product.quantity;
+                            });
+                            grandTotal += totalAmount;
+
+                            const orderDiv = $(`
+                                <div class="order">
+                                    <div class="order-header">
+                                        <span class="order-date">Order Date: ${new Date(order.placedAt).toLocaleDateString()}</span>
+                                        <span class="order-total">Total Amount: $${totalAmount.toFixed(2)}</span>
+                                    </div>
+                                    <div class="order-items"></div>
+                                </div>
+                            `);
+                            ordersContainer.append(orderDiv);
+
+                            const orderItemsContainer = orderDiv.find('.order-items');
+                            order.items.forEach(product => {
+                                const itemHtml = `
+                                    <div class="order-item">
+                                        <img src="${product.image}" alt="${product.name}" />
+                                        <div class="item-details">
+                                            <h3>${product.name}</h3>
+                                            <p>Price: $${product.price}</p>
+                                            <p>Quantity: ${product.quantity}</p>
+                                            <p>Total: $${(product.price * product.quantity).toFixed(2)}</p>
+                                        </div>
+                                    </div>
+                                `;
+                                orderItemsContainer.append(itemHtml);
+                            });
+                        });
+
+                        grandTotalElement.text(`Grand Total of All Orders: $${grandTotal.toFixed(2)}`);
+                        clearOrdersButton.show();
+                    }).catch(error => {
+                        console.error("Error loading orders:", error);
+                        ordersContainer.html('<p>Failed to load orders. Try again later.</p>');
+                    });
+                }
+
+                $('#clearOrdersButton').click(function () {
+                    if (confirm("Are you sure you want to clear all orders?")) {
+                        const userDocRef = db.collection('users').doc(username);
+                        userDocRef.set({ orders: [] }, { merge: true })
+                            .then(loadOrders)
+                            .catch(error => {
+                                console.error("Error clearing orders:", error);
+                                alert("Failed to clear orders.");
+                            });
+                    }
+                });
+
+                loadOrders();
+            });
+        });
+    </script>
+
+    <link rel="stylesheet" href="/css/orders.css" />
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/home">Home</a>
+            <a href="/products">Products</a>
+            <a href="/cart">Cart</a>
+            <a href="/orders" class="active">Orders</a>
+            <a href="/profile">Profile</a>
+            <!-- Admin link visible only to admin -->
+            <script>
+                fetch('/api/session').then(res => res.json()).then(data => {
+                    if (data.username === 'admin') {
+                        const adminLink = document.createElement('a');
+                        adminLink.href = '/admindashboard';
+                        adminLink.textContent = 'Admin Panel';
+                        document.querySelector('header nav').appendChild(adminLink);
+                    }
+                });
+            </script>
+            <a href="/logout">Logout</a>
+        </nav>
+    </header>
+
+    <h1>Your Orders</h1>
+    <div id="ordersContainer"></div>
+    <h2 id="grandTotal" style="margin-top: 20px; color: #333;"></h2>
+    <button id="clearOrdersButton" style="display: none;">Clear Orders</button>
+</body>
+</html>

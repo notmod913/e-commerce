@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/png" href="https://i.pinimg.com/736x/f2/b6/9c/f2b69c4361ecc3e3a6b672aaf2fee5f4.jpg">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="/css/profile.css">
+
+    <style>
+        .profile-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        .profile-field {
+            margin-bottom: 15px;
+        }
+        #maskedPassword {
+            font-family: monospace;
+            letter-spacing: 3px;
+        }
+    </style>
+</head>
+<body>
+<header>
+<nav>
+    <a href="/home">Home</a>
+    <a href="/products">Products</a>
+    <a href="/cart">Cart</a>
+    <a href="/orders">Orders</a>
+     <th:block th:if="${session.role == 'ADMIN'}">
+                <a th:href="@{/adminDashboard}">Admin Panel</a>
+            </th:block>
+    <a href="/profile">Profile</a>
+    <a href="/logout">Logout</a>
+</nav>
+</header>
+<div class="container">
+    <div class="profile-container">
+        <h2 class="text-center">User Profile</h2>
+
+        <div class="profile-field"><strong>Name:</strong> <span id="usernameText"></span></div>
+        <div class="profile-field"><strong>Email:</strong> <span id="emailText"></span></div>
+        <div class="profile-field"><strong>Phone:</strong> <span id="phoneText"></span></div>
+        <div class="profile-field"><strong>Address:</strong> <span id="addressText"></span></div>
+        <div class="profile-field"><strong>Date of Birth:</strong> <span id="dobText"></span></div>
+        <div class="profile-field"><strong>Gender:</strong> <span id="genderText"></span></div>
+        <div class="profile-field">
+            <strong>Password:</strong>
+            <span id="maskedPassword">********</span>
+            <button class="btn btn-outline-secondary btn-sm mt-1" data-bs-toggle="modal" data-bs-target="#changePasswordModal">Change Password</button>
+        </div>
+
+        <div class="text-center mt-4">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">Edit Profile</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toasts -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMsg"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editProfileForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label>Email</label><input type="email" id="emailInput" class="form-control" required></div>
+                    <div class="mb-3"><label>Phone</label><input type="text" id="phoneInput" class="form-control" required></div>
+                    <div class="mb-3"><label>Address</label><input type="text" id="addressInput" class="form-control" required></div>
+                    <div class="mb-3"><label>Date of Birth</label><input type="date" id="dobInput" class="form-control" required></div>
+                    <div class="mb-3">
+                        <label>Gender</label>
+                        <select id="genderInput" class="form-control" required>
+                            <option value="">Select</option>
+                            <option>Male</option>
+                            <option>Female</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="changePasswordForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Change Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3"><label>New Password</label><input type="password" id="newPassword" class="form-control" required></div>
+                    <div class="mb-3"><label>Confirm Password</label><input type="password" id="confirmPassword" class="form-control" required></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyAf3vcMWpDbBWe5Xn_RMAonO53RHqZ15bQ",
+    authDomain: "profile-80e12.firebaseapp.com",
+    projectId: "profile-80e12",
+    storageBucket: "profile-80e12.appspot.com",
+    messagingSenderId: "975400278491",
+    appId: "1:975400278491:web:afec2dcca155409ca8effe",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+async function getSessionUsername() {
+    try {
+        const res = await fetch("/api/session");
+        const session = await res.json();
+        return session.username;
+    } catch {
+        return null;
+    }
+}
+
+$(document).ready(async function () {
+    const username = await getSessionUsername();
+    if (!username) {
+        window.location.href = "/login";
+        return;
+    }
+
+    const docRef = db.collection("customers").doc(username);
+    const doc = await docRef.get();
+
+    $("#usernameText").text(username);
+
+    function fillProfile(data) {
+        $("#emailText").text(data.email || "");
+        $("#phoneText").text(data.phone || "");
+        $("#addressText").text(data.address || "");
+        $("#dobText").text(data.dob || "");
+        $("#genderText").text(data.gender || "");
+
+        $("#emailInput").val(data.email || "");
+        $("#phoneInput").val(data.phone || "");
+        $("#addressInput").val(data.address || "");
+        $("#dobInput").val(data.dob || "");
+        $("#genderInput").val(data.gender || "");
+    }
+
+    if (doc.exists) fillProfile(doc.data());
+
+    $("#editProfileForm").submit(async function (e) {
+        e.preventDefault();
+        const updated = {
+            email: $("#emailInput").val(),
+            phone: $("#phoneInput").val(),
+            address: $("#addressInput").val(),
+            dob: $("#dobInput").val(),
+            gender: $("#genderInput").val()
+        };
+        await docRef.set(updated, { merge: true });
+        fillProfile(updated);
+        const toast = new bootstrap.Toast(document.getElementById("successToast"));
+        $("#toastMsg").text("Profile Created");
+        toast.show();
+        $("#editProfileModal").modal("hide");
+    });
+
+    $("#changePasswordForm").submit(async function (e) {
+        e.preventDefault();
+        const newPass = $("#newPassword").val();
+        const confirm = $("#confirmPassword").val();
+        if (newPass !== confirm) return alert("Passwords do not match!");
+
+        await docRef.set({ password: newPass }, { merge: true });
+        $("#newPassword").val('');
+        $("#confirmPassword").val('');
+        $("#changePasswordModal").modal("hide");
+        const toast = new bootstrap.Toast(document.getElementById("successToast"));
+        $("#toastMsg").text("Password Changed. Logging out...");
+        toast.show();
+        setTimeout(() => { window.location.href = "/logout"; }, 2000);
+    });
+});
+</script>
+</body>
+</html>

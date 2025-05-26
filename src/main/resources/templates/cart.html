@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/png" href="https://i.pinimg.com/736x/f2/b6/9c/f2b69c4361ecc3e3a6b672aaf2fee5f4.jpg">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="/css/cart.css">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+    <style>
+        .popup-message {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: #333;
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .popup-message.show {
+            opacity: 1;
+        }
+    </style>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAf3vcMWpDbBWe5Xn_RMAonO53RHqZ15bQ",
+            authDomain: "profile-80e12.firebaseapp.com",
+            projectId: "profile-80e12",
+            storageBucket: "profile-80e12.appspot.com",
+            messagingSenderId: "975400278491",
+            appId: "1:975400278491:web:afec2dcca155409ca8effe",
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+</head>
+<body>
+<header>
+    <nav>
+        <a href="/home">Home</a>
+        <a href="/products">Products</a>
+        <a href="/cart" class="active">Cart</a>
+        <a href="/orders">Orders</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</header>
+
+<!-- Cart Header -->
+<div class="cart-header">
+    <h1>Your Cart</h1>
+    <div id="totalPrice"></div>
+</div>
+
+<div id="cartContainer"></div>
+<div id="totalPrice"></div>
+<button id="checkoutButton" style="display: none;">Checkout</button>
+
+<!-- Popup container -->
+<div id="popupMessage" class="popup-message"></div>
+
+<script>
+    $(document).ready(function () {
+        function showPopup(message, duration = 3000, color = '#333') {
+            const popup = $('#popupMessage');
+            popup.text(message).css('background-color', color).addClass('show');
+            setTimeout(() => {
+                popup.removeClass('show');
+            }, duration);
+        }
+
+        $.get('/api/session', function (sessionData) {
+            if (!sessionData.loggedIn) {
+                showPopup('Please login first.', 3000, '#dc3545');
+                window.location.href = '/login';
+                return;
+            }
+
+            const username = sessionData.username;
+            const cartContainer = $('#cartContainer');
+            const totalPriceContainer = $('#totalPrice');
+            const checkoutButton = $('#checkoutButton');
+
+            function loadCart() {
+                const userDocRef = db.collection('users').doc(username);
+
+                userDocRef.get().then(doc => {
+                    cartContainer.empty();
+                    totalPriceContainer.empty();
+                    checkoutButton.hide();
+
+                    if (!doc.exists || !doc.data().carts || doc.data().carts.length === 0) {
+                        cartContainer.html('<p>Your cart is empty.</p>');
+                        return;
+                    }
+
+                    const carts = doc.data().carts;
+                    let total = 0;
+
+                    carts.forEach((item, index) => {
+                        const subtotal = item.price * item.quantity;
+                        total += subtotal;
+
+                        const itemHtml = `
+                            <div class="cart-item" data-index="${index}">
+                                <img src="${item.image}" alt="${item.name}" style="width: 100px; height: 100px;">
+                                <div>
+                                    <h3>${item.name}</h3>
+                                    <p>Price: $${item.price}</p>
+                                    <p>Subtotal: $${subtotal.toFixed(2)}</p>
+                                    <div class="quantity-controls">
+                                        <button class="decrease-qty">-</button>
+                                        <span>${item.quantity}</span>
+                                        <button class="increase-qty">+</button>
+                                    </div>
+                                </div>
+                                <button class="remove-item">Remove</button>
+                            </div>
+                        `;
+                        cartContainer.append(itemHtml);
+                    });
+
+                    totalPriceContainer.html(`<h2>Total: $${total.toFixed(2)}</h2>`);
+                    checkoutButton.show();
+                }).catch(err => {
+                    console.error("Error loading cart:", err);
+                    cartContainer.html('<p>Failed to load cart. Try again later.</p>');
+                });
+            }
+
+            function updateQuantity(index, change) {
+                const userDocRef = db.collection('users').doc(username);
+
+                userDocRef.get().then(doc => {
+                    if (doc.exists) {
+                        const carts = doc.data().carts;
+                        carts[index].quantity += change;
+
+                        if (carts[index].quantity <= 0) {
+                            carts.splice(index, 1);
+                        }
+
+                        return userDocRef.set({ carts }, { merge: true });
+                    }
+                }).then(loadCart);
+            }
+
+            function removeItem(index) {
+                const userDocRef = db.collection('users').doc(username);
+
+                userDocRef.get().then(doc => {
+                    if (doc.exists) {
+                        const carts = doc.data().carts;
+                        carts.splice(index, 1);
+                        return userDocRef.set({ carts }, { merge: true });
+                    }
+                }).then(loadCart);
+            }
+
+            function checkout() {
+                const userDocRef = db.collection('users').doc(username);
+
+                userDocRef.get().then(doc => {
+                    if (!doc.exists) return;
+
+                    const data = doc.data();
+                    const currentCart = data.carts || [];
+                    const existingOrders = data.orders || [];
+
+                    const newOrders = [...existingOrders, {
+                        items: currentCart,
+                        placedAt: new Date().toISOString()
+                    }];
+
+                    return userDocRef.set({
+                        orders: newOrders,
+                        carts: []
+                    }, { merge: true });
+                }).then(() => {
+                    showPopup("🛒 Order placed successfully!", 3000, "#28a745");
+                    loadCart();
+                }).catch(error => {
+                    console.error("Checkout error:", error);
+                    showPopup("❌ Failed to complete checkout.", 3000, "#dc3545");
+                });
+            }
+
+            $(document).on('click', '.increase-qty', function () {
+                const index = $(this).closest('.cart-item').data('index');
+                updateQuantity(index, 1);
+            });
+
+            $(document).on('click', '.decrease-qty', function () {
+                const index = $(this).closest('.cart-item').data('index');
+                updateQuantity(index, -1);
+            });
+
+            $(document).on('click', '.remove-item', function () {
+                const index = $(this).closest('.cart-item').data('index');
+                removeItem(index);
+            });
+
+            $('#checkoutButton').click(function () {
+                if (confirm("Are you sure you want to place the order?")) {
+                    checkout();
+                }
+            });
+
+            loadCart();
+        });
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/png" href="https://i.pinimg.com/736x/f2/b6/9c/f2b69c4361ecc3e3a6b672aaf2fee5f4.jpg">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="/css/products.css">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAf3vcMWpDbBWe5Xn_RMAonO53RHqZ15bQ",
+            authDomain: "profile-80e12.firebaseapp.com",
+            projectId: "profile-80e12",
+            storageBucket: "profile-80e12.appspot.com",
+            messagingSenderId: "975400278491",
+            appId: "1:975400278491:web:afec2dcca155409ca8effe",
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+    </script>
+
+    <style>
+        .notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(76, 175, 80, 0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 20px;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <nav>
+        <a href="/home">Home</a>
+        <a href="/products">Products</a>
+        <a href="/cart">Cart</a>
+        <a href="/orders">Orders</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</header>
+
+<!-- Category Filter Section -->
+<div>
+    <label for="categoryFilter">Filter by Category: </label>
+    <select id="categoryFilter">
+        <option value="">All Categories</option>
+    </select>
+</div>
+
+<!-- Products Section -->
+<h1>Products</h1>
+<div id="productsContainer"></div>
+
+<script>
+    $(document).ready(function () {
+        $.get('/api/session', function (sessionData) {
+            if (!sessionData.loggedIn) {
+                alert('Please login first.');
+                window.location.href = '/login';
+                return;
+            }
+
+            const username = sessionData.username;
+            const role = sessionData.role;
+
+            // Load categories
+            $.get('/api/products/categories', function (categories) {
+                const categoryFilter = $('#categoryFilter');
+                categories.forEach(function (category) {
+                    categoryFilter.append(`<option value="${category}">${category}</option>`);
+                });
+            });
+
+            // Fetch and display products
+            function fetchProducts(category = '') {
+                $.get('/api/products', { category: category }, function (data) {
+                    const productsContainer = $('#productsContainer');
+                    productsContainer.empty();
+
+                    if (data.length === 0) {
+                        productsContainer.html('<p>No products available.</p>');
+                        return;
+                    }
+
+                    data.forEach(function (product) {
+                        let productElement = `
+                            <div class="product">
+                                <h3>${product.name}</h3>
+                                <img src="${product.pictureUrl}" alt="${product.name}" style="width: 200px; height: 200px;">
+                                <p>Price: $${product.price}</p>
+                                <p>Category: ${product.category}</p>
+                                ${role === 'ADMIN' ? `<p>ID: ${product.id}</p>` : ''}
+                                <button class="add-to-cart" 
+                                        data-id="${product.id}" 
+                                        data-name="${product.name}" 
+                                        data-image="${product.pictureUrl}" 
+                                        data-price="${product.price}">
+                                    Add to Cart
+                                </button>
+                            </div>
+                        `;
+                        productsContainer.append(productElement);
+                    });
+
+                    // Handle add to cart click
+                    $('.add-to-cart').click(function () {
+                        const product = {
+                            id: $(this).data('id'),
+                            name: $(this).data('name'),
+                            image: $(this).data('image'),
+                            price: $(this).data('price'),
+                            quantity: 1,
+                            addedAt: new Date()
+                        };
+
+                        const userDocRef = db.collection('users').doc(username);
+
+                        userDocRef.get().then((doc) => {
+                            let carts = [];
+
+                            if (doc.exists) {
+                                const data = doc.data();
+                                carts = data.carts || [];
+
+                                const index = carts.findIndex(item => item.id === product.id);
+                                if (index >= 0) {
+                                    carts[index].quantity += 1;
+                                } else {
+                                    carts.push(product);
+                                }
+                            } else {
+                                carts.push(product);
+                            }
+
+                            return userDocRef.set({ carts: carts }, { merge: true });
+                        }).then(() => {
+                            $('<div class="notification">')
+                                .text(`${product.name} added to cart!`)
+                                .appendTo('body')
+                                .fadeIn(300)
+                                .delay(2000)
+                                .fadeOut(300, function () {
+                                    $(this).remove();
+                                });
+                        }).catch((error) => {
+                            console.error("Error adding to cart:", error);
+                            alert("Failed to add to cart.");
+                        });
+                    });
+                }).fail(function (error) {
+                    console.error('Error fetching products:', error);
+                    $('#productsContainer').html('<p>Failed to load products.</p>');
+                });
+            }
+
+            // Initial fetch
+            fetchProducts();
+
+            // Handle category change
+            $('#categoryFilter').change(function () {
+                fetchProducts($(this).val());
+            });
+        });
+    });
+</script>
+</body>
+</html>

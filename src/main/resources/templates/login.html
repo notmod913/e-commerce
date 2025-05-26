@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login Page</title>
+  <link rel="icon" type="image/png" href="https://i.pinimg.com/736x/f2/b6/9c/f2b69c4361ecc3e3a6b672aaf2fee5f4.jpg">
+  <link rel="stylesheet" href="/css/login.css" />
+</head>
+<body>
+<div class="container" id="container">
+  <!-- Spring error message -->
+  <p th:if="${error}" th:text="${error}" id="spring-error" class="error-message"></p>
+  <p id="message" class="error-message" style="display:none;"></p>
+
+  <!-- Sign Up Form -->
+  <div class="form-container sign-up" id="signUpForm">
+    <form id="registerForm">
+      <h1>Create Account</h1>
+      <input type="text" name="username" placeholder="Username" required />
+      <input type="password" name="password" placeholder="Password" required />
+      <input type="password" name="confirmPassword" placeholder="Confirm Password" required />
+      <a href="#" id="goLogin">
+        Already have an account? <span class="link-button">Sign in</span>
+      </a>
+      <button type="submit">Sign Up</button>
+    </form>
+  </div>
+
+  <!-- Sign In Form -->
+  <div class="form-container sign-in active" id="signInForm">
+    <form id="auth-form" method="post" action="/login">
+      <h1>Sign In</h1>
+      <input type="text" name="username" placeholder="Username" required autocomplete="username" />
+      <input type="password" name="password" placeholder="Password" required autocomplete="current-password" />
+      <a href="#" id="goRegister">
+        Don't have an account? <span class="link-button">Sign up</span>
+      </a>
+      <button type="submit">Sign In</button>
+    </form>
+  </div>
+
+  <div class="form-placeholder" id="formPlaceholder"></div>
+
+  <div class="toggle-container">
+    <div class="toggle">
+      <div class="toggle-panel toggle-left"></div>
+      <div class="toggle-panel toggle-right"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const container = document.getElementById("container");
+  const goRegister = document.getElementById("goRegister");
+  const goLogin = document.getElementById("goLogin");
+
+  const signInForm = document.getElementById("signInForm");
+  const signUpForm = document.getElementById("signUpForm");
+  const placeholder = document.getElementById("formPlaceholder");
+
+  goRegister.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 760) {
+      signInForm.classList.remove("active");
+      signUpForm.classList.add("active");
+      placeholder.classList.add("active");
+    } else {
+      container.classList.add("active");
+      placeholder.classList.remove("active");
+    }
+  });
+
+  goLogin.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 760) {
+      signUpForm.classList.remove("active");
+      signInForm.classList.add("active");
+      placeholder.classList.add("active");
+    } else {
+      container.classList.remove("active");
+      placeholder.classList.remove("active");
+    }
+  });
+
+  const messageEl = document.getElementById("message");
+  let messageTimeout = null;
+
+  function showMessage(text, isError = true, autoHide = true) {
+    messageEl.style.display = "block";
+    messageEl.textContent = text;
+    messageEl.className = isError ? "error-message" : "success-message";
+    messageEl.style.opacity = 1;
+
+    if (autoHide) {
+      if (messageTimeout) clearTimeout(messageTimeout);
+      messageTimeout = setTimeout(() => {
+        messageEl.style.opacity = 0;
+        setTimeout(() => {
+          messageEl.style.display = "none";
+        }, 500);
+      }, 2500);
+    }
+  }
+
+  const registerForm = document.getElementById("registerForm");
+
+  registerForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const username = registerForm.username.value.trim();
+    const password = registerForm.password.value;
+    const confirmPassword = registerForm.confirmPassword.value;
+
+    if (!username || !password || !confirmPassword) {
+      showMessage("All fields are required.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      showMessage("Passwords do not match.");
+      return;
+    }
+
+    try {
+      const formData = new URLSearchParams();
+      formData.append("username", username);
+      formData.append("password", password);
+      formData.append("confirmPassword", confirmPassword);
+
+      const response = await fetch("/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString(),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showMessage(result.message || "Registered successfully! Please log in.", false);
+        setTimeout(() => {
+          registerForm.reset();
+          goLogin.click(); // switch back to login
+        }, 1500);
+      } else {
+        showMessage(result.message || "Registration failed.");
+      }
+    } catch (err) {
+      showMessage("An error occurred during registration.");
+      console.error(err);
+    }
+  });
+
+  // Fade Spring Boot error after a few seconds
+  document.addEventListener("DOMContentLoaded", () => {
+    const springError = document.getElementById("spring-error");
+    if (springError) {
+      setTimeout(() => {
+        springError.style.transition = "opacity 0.5s ease";
+        springError.style.opacity = 0;
+        setTimeout(() => {
+          springError.style.display = "none";
+        }, 500);
+      }, 1500);
+    }
+  });
+</script>
+</body>
+</html>
