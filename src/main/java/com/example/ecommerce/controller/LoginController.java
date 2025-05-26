@@ -21,7 +21,7 @@ import java.util.*;
 @Controller
 public class LoginController {
 
-    private final String LOG_FILE_PATH = "src/main/resources/static/logins.json";
+    private final String LOG_FILE_PATH = "data/logins.json";
 
     @Autowired
     private IpWhoisService ipWhoisService;
