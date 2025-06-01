@@ -3,7 +3,7 @@ package com.example.ecommerce.model;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "products")
+@Document(collection = "new_products")
 public class Product {
 
     @Id
