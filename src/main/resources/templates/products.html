@@ -25,22 +25,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
     </script>
-
-    <style>
-        .notification {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(76, 175, 80, 0.8);
-            color: white;
-            padding: 20px 40px;
-            border-radius: 10px;
-            font-size: 20px;
-            z-index: 1000;
-            display: none;
-        }
-    </style>
 </head>
 <body>
 <header>
@@ -49,6 +33,9 @@
         <a href="/products">Products</a>
         <a href="/cart">Cart</a>
         <a href="/orders">Orders</a>
+         <th:block th:if="${session.role == 'ADMIN'}">
+                <a th:href="@{/adminDashboard}">Admin Panel</a>
+            </th:block>
         <a href="/profile">Profile</a>
         <a href="/logout">Logout</a>
     </nav>
@@ -66,8 +53,35 @@
 <h1>Products</h1>
 <div id="productsContainer"></div>
 
+<!-- Modal -->
+<div id="productModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3 id="modalProductName"></h3>
+        <img id="modalProductImage" src="" alt="" style="width: 200px; height: 200px;">
+        <p id="modalProductPrice"></p>
+        <button id="modalAddToCart">Add to Cart</button>
+    </div>
+</div>
+
 <script>
     $(document).ready(function () {
+        const modal = $('#productModal');
+        const modalName = $('#modalProductName');
+        const modalImage = $('#modalProductImage');
+        const modalPrice = $('#modalProductPrice');
+        let modalProductData = {};
+
+        $('.close').click(function() {
+            modal.hide();
+        });
+
+        $(window).click(function(event) {
+            if (event.target === modal[0]) {
+                modal.hide();
+            }
+        });
+
         $.get('/api/session', function (sessionData) {
             if (!sessionData.loggedIn) {
                 alert('Please login first.');
@@ -78,7 +92,6 @@
             const username = sessionData.username;
             const role = sessionData.role;
 
-            // Load categories
             $.get('/api/products/categories', function (categories) {
                 const categoryFilter = $('#categoryFilter');
                 categories.forEach(function (category) {
@@ -86,7 +99,6 @@
                 });
             });
 
-            // Fetch and display products
             function fetchProducts(category = '') {
                 $.get('/api/products', { category: category }, function (data) {
                     const productsContainer = $('#productsContainer');
@@ -100,26 +112,24 @@
                     data.forEach(function (product) {
                         let productElement = `
                             <div class="product">
-                                <h3>${product.name}</h3>
+                                <h3 class="product-title" 
+                                    data-id="${product.id}"
+                                    data-name="${product.name}"
+                                    data-image="${product.pictureUrl}"
+                                    data-price="${product.price}">
+                                    ${product.name}
+                                </h3>
                                 <img src="${product.pictureUrl}" alt="${product.name}" style="width: 200px; height: 200px;">
                                 <p>Price: $${product.price}</p>
                                 <p>Category: ${product.category}</p>
                                 ${role === 'ADMIN' ? `<p>ID: ${product.id}</p>` : ''}
-                                <button class="add-to-cart" 
-                                        data-id="${product.id}" 
-                                        data-name="${product.name}" 
-                                        data-image="${product.pictureUrl}" 
-                                        data-price="${product.price}">
-                                    Add to Cart
-                                </button>
                             </div>
                         `;
                         productsContainer.append(productElement);
                     });
 
-                    // Handle add to cart click
-                    $('.add-to-cart').click(function () {
-                        const product = {
+                    $('.product-title').click(function () {
+                        modalProductData = {
                             id: $(this).data('id'),
                             name: $(this).data('name'),
                             image: $(this).data('image'),
@@ -128,35 +138,42 @@
                             addedAt: new Date()
                         };
 
+                        modalName.text(modalProductData.name);
+                        modalImage.attr('src', modalProductData.image);
+                        modalPrice.text(`Price: $${modalProductData.price}`);
+                        modal.show();
+                    });
+
+                    $('#modalAddToCart').off('click').on('click', function () {
                         const userDocRef = db.collection('users').doc(username);
 
                         userDocRef.get().then((doc) => {
                             let carts = [];
-
                             if (doc.exists) {
                                 const data = doc.data();
                                 carts = data.carts || [];
-
-                                const index = carts.findIndex(item => item.id === product.id);
+                                const index = carts.findIndex(item => item.id === modalProductData.id);
                                 if (index >= 0) {
                                     carts[index].quantity += 1;
                                 } else {
-                                    carts.push(product);
+                                    carts.push(modalProductData);
                                 }
                             } else {
-                                carts.push(product);
+                                carts.push(modalProductData);
                             }
 
                             return userDocRef.set({ carts: carts }, { merge: true });
                         }).then(() => {
                             $('<div class="notification">')
-                                .text(`${product.name} added to cart!`)
+                                .text(`added to cart!`)
                                 .appendTo('body')
                                 .fadeIn(300)
                                 .delay(2000)
                                 .fadeOut(300, function () {
                                     $(this).remove();
                                 });
+
+                            modal.hide();
                         }).catch((error) => {
                             console.error("Error adding to cart:", error);
                             alert("Failed to add to cart.");
@@ -168,10 +185,8 @@
                 });
             }
 
-            // Initial fetch
             fetchProducts();
 
-            // Handle category change
             $('#categoryFilter').change(function () {
                 fetchProducts($(this).val());
             });
@@ -180,3 +195,4 @@
 </script>
 </body>
 </html>
+
