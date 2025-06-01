@@ -1,30 +1,127 @@
-/* Layout for the product grid */
+    /* Container grid: 5 columns, responsive */
 #productsContainer {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 items per row */
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 20px;
     padding: 20px;
+    box-sizing: border-box;
 }
+
+/* Each product card */
 .product {
+    background-color: white;
     border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 10px;
-    text-align: center;
-    background-color: #f9f9f9;
-}
-.product img {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
     border-radius: 8px;
+    padding: 15px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+    cursor: default;
 }
+
+/* Hover effect */
+.product:hover {
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+/* Product image fixed size & object-fit */
+.product img {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+    margin-bottom: 10px;
+}
+
+/* Product title styling */
 .product h3 {
-    font-size: 18px;
+    font-size: 1.1rem;
     margin: 10px 0;
+    height: 48px; /* fixed height to keep cards uniform */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
 }
+
+/* Price styling */
 .product p {
-    font-size: 14px;
+    margin: 5px 0;
+    font-weight: 600;
+    color: #000000; /* Amazon's price color */
 }
+
+/* Category styling */
+.product p.category {
+    font-weight: normal;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+/* Add to cart button */
+.product button.add-to-cart {
+    margin-top: auto; /* push button to bottom */
+    padding: 10px 15px;
+    background-color: #ffd814;
+    border: 1px solid #fcd200;
+    border-radius: 5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+.product button.add-to-cart:hover {
+    background-color: #f7ca00;
+}
+
+
+        .notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(76, 175, 80, 0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 20px;
+            z-index: 1000;
+            display: none;
+        }
+
+        /* Modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
 
 /* Dashboard Buttons */
 .dashboard-buttons {
@@ -32,6 +129,7 @@
     justify-content: space-around;
     margin: 20px 0;
 }
+
 .dashboard-buttons button {
     padding: 10px 20px;
     font-size: 16px;
@@ -41,21 +139,30 @@
     background-color: #007bff;
     color: white;
 }
+
 .dashboard-buttons button:hover {
     background-color: #0056b3;
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+    #productsContainer {
+        grid-template-columns: repeat(4, 1fr); /* 4 items per row */
+    }
+}
+
 @media (max-width: 768px) {
     #productsContainer {
         grid-template-columns: repeat(2, 1fr); /* 2 items per row on tablets */
     }
 }
+
 @media (max-width: 480px) {
     #productsContainer {
         grid-template-columns: 1fr; /* 1 item per row on mobile */
     }
 }
+
 /* General Body Styling */
 body {
     font-family: 'Arial', sans-serif;
@@ -66,6 +173,10 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    background-image: url('/images/image2.jpg'); /* Change this path to your actual image */
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
 /* Header Styling */
@@ -107,12 +218,13 @@ h1 span {
 /* Content Styling */
 .content {
     margin: 30px;
-    background-color: white;
+    background-color: rgba(255, 255, 255, 0.85);
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
     flex-grow: 1;
     text-align: center;
+    backdrop-filter: blur(8px);
 }
 
 .content p {
@@ -152,40 +264,6 @@ footer {
     font-size: 14px;
 }
 
-/* Responsive Design for smaller screens */
-@media (max-width: 768px) {
-    header nav a {
-        font-size: 14px;
-        margin: 0 10px;
-    }
-
-    h1 {
-        font-size: 20px;
-    }
-
-    .content {
-        margin: 15px;
-        padding: 15px;
-    }
-
-    button {
-        padding: 10px 25px;
-    }
-}
-/* Add Background Image to Entire Page */
-body {
-    background-image: url('/images/image2.jpg'); /* Change this path to your actual image */
-    background-size: cover; /* Ensure the image covers the entire background */
-    background-position: center;
-    background-attachment: fixed; /* Keeps the image fixed while scrolling */
-}
-
-/* Make Content Box Semi-Transparent */
-.content {
-    background-color: rgba(255, 255, 255, 0.85); /* Adds a slight transparency effect */
-    backdrop-filter: blur(8px); /* Optional: Adds a blur effect for a glass-like feel */
-}
-
 /* Category Filter Section */
 #categoryFilter {
     padding: 10px;
@@ -216,12 +294,32 @@ body {
     #categoryFilter {
         width: 150px;
     }
+
+    header nav a {
+        font-size: 14px;
+        margin: 0 10px;
+    }
+
+    h1 {
+        font-size: 20px;
+    }
+
+    .content {
+        margin: 15px;
+        padding: 15px;
+    }
+
+    button {
+        padding: 10px 25px;
+    }
 }
+
+/* Notification Styling */
 .notification {
     position: fixed;
-    top: 50%;  /* Position it vertically in the middle */
-    left: 50%; /* Position it horizontally in the middle */
-    transform: translate(-50%, -50%); /* Adjust for exact centering */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     background-color: #4CAF50;
     color: white;
     padding: 10px 20px;
@@ -230,4 +328,11 @@ body {
     z-index: 1000;
     display: none;
 }
+/* Hover Effects for Product Cards */
+.product:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
 
