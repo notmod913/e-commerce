@@ -74,13 +74,6 @@ You can deploy this project on cloud platforms such as:
 - **Render** (Recommended for Spring Boot apps)
 
 > 🔧 Make sure to set up environment variables for Firestore and MongoDB credentials on the deployment platform.
-
----
-
-## 📸 Screenshots
-
-> _Add application UI screenshots here (e.g., homepage, cart page, order summary)._
-
 ---
 
 ## 📚 References
