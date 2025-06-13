@@ -30,8 +30,8 @@ An eCommerce web application built using **Spring Boot**, providing user authent
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
-cd your-repo-name
+git clone https://github.com/notmod913/e-commerce.git
+cd e-commerce
 ```
 
 ### 2. Configure Firestore & MongoDB
