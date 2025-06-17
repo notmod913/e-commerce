@@ -98,39 +98,93 @@ this.contactTrigger?.addEventListener("click", () => {
   box.style.boxShadow = "0 5px 15px rgba(0,0,0,0.3)";
 
   box.innerHTML = `
-<h3>Contact Me</h3>
+    <h3>Contact Me</h3>
 
-<!-- GitHub -->
-<a href="https://github.com/minecraftchandan" target="_blank" style="display: inline-block; margin: 8px;">
-  <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" width="48" height="48" style="border-radius: 10px; cursor: pointer;">
-</a>
+    <a href="https://github.com/minecraftchandan" target="_blank" style="display:inline-block;margin:8px;">
+      <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" alt="GitHub" width="48" height="48" style="border-radius:10px;cursor:pointer;">
+    </a>
 
-<!-- Discord -->
-<a href="https://discord.com/users/587709425708695552" target="_blank" style="display: inline-block; margin: 8px;">
-  <img src="https://cdn-icons-png.flaticon.com/512/2111/2111370.png" alt="Discord" width="48" height="48" style="border-radius: 10px; cursor: pointer;">
-</a>
+    <a href="https://discord.com/users/587709425708695552" target="_blank" style="display:inline-block;margin:8px;">
+      <img src="https://cdn-icons-png.flaticon.com/512/2111/2111370.png" alt="Discord" width="48" height="48" style="border-radius:10px;cursor:pointer;">
+    </a>
 
-<!-- YouTube -->
-<a href="https://www.youtube.com/@HU_tao5669" target="_blank" style="display: inline-block; margin: 8px;">
-  <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube" width="48" height="48" style="border-radius: 10px; cursor: pointer;">
-</a>
+    <a href="https://www.youtube.com/@HU_tao5669" target="_blank" style="display:inline-block;margin:8px;">
+      <img src="https://cdn-icons-png.flaticon.com/512/1384/1384060.png" alt="YouTube" width="48" height="48" style="border-radius:10px;cursor:pointer;">
+    </a>
 
-<br/><br/>
-
-<!-- Close Button -->
-<button id="closeModalBtn" style="padding: 8px 16px; border: none; border-radius: 6px; background-color:#173fb5; cursor: pointer;">
-  Close
-</button>
-
+    <br/><br/>
+    <label for="contactMessage" style="font-weight:bold;">Leave a message:</label><br/>
+    <textarea id="contactMessage" rows="4" style="width:100%;padding:8px;border-radius:6px;border:1px solid #ccc;" placeholder="Type your message here..."></textarea>
+    <br/><br/>
+    <button id="sendMessageBtn" style="padding:8px 16px;border:none;border-radius:6px;background-color:#28a745;color:white;cursor:pointer;">
+      Send Message
+    </button>
+    <button id="closeModalBtn" style="padding:8px 16px;margin-left:10px;border:none;border-radius:6px;background-color:#173fb5;color:white;cursor:pointer;">
+      Close
+    </button>
   `;
 
   modal.appendChild(box);
   document.body.appendChild(modal);
 
-  // Close button
-  document.getElementById("closeModalBtn").addEventListener("click", () => {
+  // Initialize Firebase if not already initialized
+  if (!firebase.apps.length) {
+    const firebaseConfig = {
+      apiKey: "AIzaSyAf3vcMWpDbBWe5Xn_RMAonO53RHqZ15bQ",
+      authDomain: "profile-80e12.firebaseapp.com",
+      projectId: "profile-80e12",
+      storageBucket: "profile-80e12.appspot.com",
+      messagingSenderId: "975400278491",
+      appId: "1:975400278491:web:afec2dcca155409ca8effe",
+    };
+    firebase.initializeApp(firebaseConfig);
+  }
+
+  const db = firebase.firestore();
+
+  // Button handlers
+  const sendMessageBtn = box.querySelector('#sendMessageBtn');
+  const closeModalBtn = box.querySelector('#closeModalBtn');
+
+  sendMessageBtn.onclick = async () => {
+    const message = box.querySelector('#contactMessage').value.trim();
+    if (!message) {
+      alert('⚠️ Please enter a message.');
+      return;
+    }
+
+    // Fetch username from /api/session
+    let username = "Anonymous";
+    try {
+      const res = await fetch('/api/session');
+      const data = await res.json();
+      if (data?.username) username = data.username;
+    } catch (e) {
+      console.warn('Could not fetch session:', e);
+    }
+
+    try {
+      await db.collection("contact").add({
+        username,
+        message,
+        timestamp: new Date().toISOString()
+      });
+      const successMsg = document.createElement("p");
+      successMsg.textContent = "✅ Message sent!";
+      successMsg.style.color = "green";
+      successMsg.style.marginTop = "10px";
+      box.appendChild(successMsg);
+
+      document.body.removeChild(modal);
+    } catch (err) {
+      console.error(err);
+      alert("🚫 Error sending message.");
+    }
+  };
+
+  closeModalBtn.onclick = () => {
     document.body.removeChild(modal);
-  });
+  };
 });
 
   }
@@ -230,3 +284,4 @@ this.contactTrigger?.addEventListener("click", () => {
 
 // Start the interaction
 new ProfileCard();
+
